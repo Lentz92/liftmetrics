@@ -14,7 +14,7 @@ func FindCSVFile(dataDir string) (string, error) {
 	}
 
 	for _, file := range files {
-		if !file.IsDir() && strings.HasPrefix(file.Name(), "openipf") && strings.HasSuffix(file.Name(), ".csv") {
+		if !file.IsDir() && strings.HasPrefix(file.Name(), "openipf-") && strings.HasSuffix(file.Name(), ".csv") {
 			return filepath.Join(dataDir, file.Name()), nil
 		}
 	}

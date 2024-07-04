@@ -20,6 +20,7 @@
         <method importPath="database/sql" receiver="*DB" name="Close" />
         <method importPath="database/sql" receiver="*Stmt" name="Close" />
         <method importPath="database/sql" receiver="*Tx" name="Rollback" />
+        <method importPath="archive/zip" receiver="*Writer" name="Close" />
       </methods>
     </inspection_tool>
     <inspection_tool class="SqlNoDataSourceInspection" enabled="false" level="WARNING" enabled_by_default="false" />
