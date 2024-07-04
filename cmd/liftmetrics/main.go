@@ -68,23 +68,55 @@ func main() {
 	}
 
 	// Step 7: Calculate Successful attempts for the database
-	fmt.Println("\nCalculating new metrics for the database!")
-	err = db.CalculateSuccessfulAttempts(dbFilePath)
-	if err != nil {
-		log.Fatalf("Failed to update lift attempts in database: %v", err)
-	}
+	calcSuccessfulAttemptsDone := make(chan error)
+	go func() {
+		fmt.Println("\nCalculating new metrics for the database!")
+		calcSuccessfulAttemptsDone <- db.CalculateSuccessfulAttempts(dbFilePath)
+	}()
+
+	//fmt.Println("\nCalculating new metrics for the database!")
+	//err = db.CalculateSuccessfulAttempts(dbFilePath)
+	//if err != nil {
+	//	log.Fatalf("Failed to update lift attempts in database: %v", err)
+	//}
 
 	//  Step 8: Create new table and calculate relative diff in attempts
-	err = db.LiftDiffTable(database)
-	if err != nil {
-		log.Fatalf("Failed to ensure lift_diffs table exists: %v", err)
-	}
+	calcDiffDone := make(chan error)
+	go func() {
+		if err := db.LiftDiffTable(database); err != nil {
+			calcDiffDone <- fmt.Errorf("failed to ensure lift_diffs table exists: %w", err)
+			return
+		}
 
-	err = db.CalculateRelativeDiff(database)
-	if err != nil {
-		log.Fatalf("Failed to calculate and insert relative differences: %v", err)
+		if err := db.CalculateRelativeDiff(database); err != nil {
+			calcDiffDone <- fmt.Errorf("failed to calculate and insert relative differences: %w", err)
+			return
+		}
+
+		calcDiffDone <- nil
+	}()
+
+	// Wait for both concurrent tasks to finish
+	if err := <-calcSuccessfulAttemptsDone; err != nil {
+		log.Fatalf("Failed to update lift attempts in database: %v", err)
+	}
+	if err := <-calcDiffDone; err != nil {
+		log.Fatalf("Failed to calculate relative differences: %v", err)
 	}
 
 	fmt.Println("\nAll setup and calculations complete!")
-
 }
+
+//	err = db.LiftDiffTable(database)
+//	if err != nil {
+//		log.Fatalf("Failed to ensure lift_diffs table exists: %v", err)
+//	}
+//
+//	err = db.CalculateRelativeDiff(database)
+//	if err != nil {
+//		log.Fatalf("Failed to calculate and insert relative differences: %v", err)
+//	}
+//
+//	fmt.Println("\nAll setup and calculations complete!")
+//
+//}
