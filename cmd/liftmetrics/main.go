@@ -9,10 +9,11 @@ import (
 )
 
 const (
-	dataURL = "https://openpowerlifting.gitlab.io/opl-csv/files/openipf-latest.zip"
-	dataDir = "../../data"
-	zipFile = "openipf-latest.zip"
-	dbName  = "openipf.db"
+	dataURL    = "https://openpowerlifting.gitlab.io/opl-csv/files/openipf-latest.zip"
+	websiteURL = "https://openpowerlifting.gitlab.io/opl-csv/bulk-csv.html"
+	dataDir    = "../../data"
+	zipFile    = "openipf-latest.zip"
+	dbName     = "openipf.db"
 )
 
 func main() {
@@ -37,22 +38,22 @@ func main() {
 	// Log the start of the process
 	log.Println("Starting database setup process...")
 
-	// Download, extract, and process data
-	if err := setupDatabase(dataURL, filePath, absDataDir, dbFilePath); err != nil {
+	// Check for updates, download, extract, and process data if needed
+	if err := setupDatabase(dataURL, websiteURL, filePath, absDataDir, dbFilePath); err != nil {
 		log.Fatalf("Failed to setup database: %v", err)
 	}
 
-	log.Println("Database setup completed successfully.")
+	log.Println("Database setup process completed.")
 }
 
 // setupDatabase wraps the services.SetupDatabase function with additional logging.
-func setupDatabase(dataURL, filePath, absDataDir, dbFilePath string) error {
-	log.Println("Downloading and processing data...")
-	err := services.SetupDatabase(dataURL, filePath, absDataDir, dbFilePath)
+func setupDatabase(dataURL, websiteURL, filePath, absDataDir, dbFilePath string) error {
+	log.Println("Checking for updates and processing data if needed...")
+	err := services.SetupDatabase(dataURL, websiteURL, filePath, absDataDir, dbFilePath)
 	if err != nil {
 		log.Printf("Error during database setup: %v", err)
 		return err
 	}
-	log.Println("Data processing completed.")
+	log.Println("Database setup completed successfully.")
 	return nil
 }
