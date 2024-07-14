@@ -127,7 +127,7 @@ func createTables(db *sql.DB) error {
         TotalSuccessfulAttempts INTEGER DEFAULT 0
     );
 
-    CREATE TABLE IF NOT EXISTS lift_diffs (
+    CREATE TABLE IF NOT EXISTS lifter_metrics (
         ID TEXT PRIMARY KEY,
         Name TEXT,
         Date TEXT,
@@ -140,8 +140,18 @@ func createTables(db *sql.DB) error {
         Deadlift1Perc REAL,
         Deadlift2Perc REAL,
         Deadlift3Perc REAL,
-        FOREIGN KEY (ID) REFERENCES Records(ID)
-    );`
+        Squat1To2Kg REAL,
+        Squat2To3Kg REAL,
+        Bench1To2Kg REAL,
+        Bench2To3Kg REAL,
+        Deadlift1To2Kg REAL,
+        Deadlift2To3Kg REAL,
+        FOREIGN KEY (ID) REFERENCES records(ID)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_lifter_metrics_name_date ON lifter_metrics(Name, Date);
+    CREATE INDEX IF NOT EXISTS idx_records_name_date ON records(Name, Date);
+    `
 
 	_, err := db.Exec(createTableSQL)
 	if err != nil {
@@ -150,7 +160,6 @@ func createTables(db *sql.DB) error {
 
 	return nil
 }
-
 func PopulateDatabase(db *sql.DB, records []*Record) error {
 	tx, err := db.Begin()
 	if err != nil {
@@ -192,53 +201,6 @@ func PopulateDatabase(db *sql.DB, records []*Record) error {
 
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	return nil
-}
-
-func CalculateSuccessfulAttempts(db *sql.DB) error {
-	updateAttemptsSQL := `
-    UPDATE Records SET 
-        SuccessfulSquatAttempts = (CASE WHEN Squat1Kg > 0 THEN 1 ELSE 0 END) +
-                                  (CASE WHEN Squat2Kg > 0 THEN 1 ELSE 0 END) +
-                                  (CASE WHEN Squat3Kg > 0 THEN 1 ELSE 0 END),
-        SuccessfulBenchAttempts = (CASE WHEN Bench1Kg > 0 THEN 1 ELSE 0 END) +
-                                  (CASE WHEN Bench2Kg > 0 THEN 1 ELSE 0 END) +
-                                  (CASE WHEN Bench3Kg > 0 THEN 1 ELSE 0 END),
-        SuccessfulDeadliftAttempts = (CASE WHEN Deadlift1Kg > 0 THEN 1 ELSE 0 END) +
-                                     (CASE WHEN Deadlift2Kg > 0 THEN 1 ELSE 0 END) +
-                                     (CASE WHEN Deadlift3Kg > 0 THEN 1 ELSE 0 END),
-        TotalSuccessfulAttempts = SuccessfulSquatAttempts + SuccessfulBenchAttempts + SuccessfulDeadliftAttempts`
-
-	if _, err := db.Exec(updateAttemptsSQL); err != nil {
-		return fmt.Errorf("failed to calculate successful attempts: %w", err)
-	}
-
-	return nil
-}
-
-func CalculateRelativeDiff(db *sql.DB) error {
-	insertSQL := `
-    INSERT INTO lift_diffs (ID, Name, Date, Squat1Perc, Squat2Perc, Squat3Perc, Bench1Perc, Bench2Perc, Bench3Perc, Deadlift1Perc, Deadlift2Perc, Deadlift3Perc)
-    SELECT 
-        ID,
-        Name,
-        Date,
-        ABS(Squat1Kg) / MAX(ABS(Squat1Kg), ABS(Squat2Kg), ABS(Squat3Kg)) * 100 AS Squat1Perc,
-        ABS(Squat2Kg) / MAX(ABS(Squat1Kg), ABS(Squat2Kg), ABS(Squat3Kg)) * 100 AS Squat2Perc,
-        ABS(Squat3Kg) / MAX(ABS(Squat1Kg), ABS(Squat2Kg), ABS(Squat3Kg)) * 100 AS Squat3Perc,
-        ABS(Bench1Kg) / MAX(ABS(Bench1Kg), ABS(Bench2Kg), ABS(Bench3Kg)) * 100 AS Bench1Perc,
-        ABS(Bench2Kg) / MAX(ABS(Bench1Kg), ABS(Bench2Kg), ABS(Bench3Kg)) * 100 AS Bench2Perc,
-        ABS(Bench3Kg) / MAX(ABS(Bench1Kg), ABS(Bench2Kg), ABS(Bench3Kg)) * 100 AS Bench3Perc,
-        ABS(Deadlift1Kg) / MAX(ABS(Deadlift1Kg), ABS(Deadlift2Kg), ABS(Deadlift3Kg)) * 100 AS Deadlift1Perc,
-        ABS(Deadlift2Kg) / MAX(ABS(Deadlift1Kg), ABS(Deadlift2Kg), ABS(Deadlift3Kg)) * 100 AS Deadlift2Perc,
-        ABS(Deadlift3Kg) / MAX(ABS(Deadlift1Kg), ABS(Deadlift2Kg), ABS(Deadlift3Kg)) * 100 AS Deadlift3Perc
-    FROM
-        Records;`
-
-	if _, err := db.Exec(insertSQL); err != nil {
-		return fmt.Errorf("failed to calculate relative differences: %w", err)
 	}
 
 	return nil

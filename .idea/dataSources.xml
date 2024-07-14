@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="openipf.db" uuid="ae2bda03-7315-4973-b7a6-b8eea275cb07">
+    <data-source source="LOCAL" name="openipf.db" uuid="bf58ada5-ea0d-4f67-a482-d3034667d199">
       <driver-ref>sqlite.xerial</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.sqlite.JDBC</jdbc-driver>

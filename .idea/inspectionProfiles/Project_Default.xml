@@ -3,6 +3,19 @@
     <option name="myName" value="Project Default" />
     <inspection_tool class="GoConvertStringLiterals" enabled="false" level="INFORMATION" enabled_by_default="false" />
     <inspection_tool class="GoUnhandledErrorResult" enabled="true" level="WARNING" enabled_by_default="true">
+      <functions>
+        <function importPath="fmt" name="Print" />
+        <function importPath="fmt" name="Printf" />
+        <function importPath="math/rand" name="Read" />
+        <function importPath="errors" name="Unwrap" />
+        <function importPath="errors" name="Join" />
+        <function importPath="fmt" name="Errorf" />
+        <function importPath="fmt" name="Println" />
+        <function importPath="errors" name="New" />
+        <function importPath="fmt" name="Fprint" />
+        <function importPath="os" name="Remove" />
+        <function importPath="os" name="RemoveAll" />
+      </functions>
       <methods>
         <method importPath="bytes" receiver="*Buffer" name="WriteString" />
         <method importPath="strings" receiver="*Builder" name="WriteRune" />
@@ -21,6 +34,9 @@
         <method importPath="database/sql" receiver="*Stmt" name="Close" />
         <method importPath="database/sql" receiver="*Tx" name="Rollback" />
         <method importPath="archive/zip" receiver="*Writer" name="Close" />
+        <method importPath="net/http" receiver="ResponseWriter" name="Write" />
+        <method importPath="os" receiver="*File" name="Write" />
+        <method importPath="database/sql" receiver="*Rows" name="Close" />
       </methods>
     </inspection_tool>
     <inspection_tool class="SqlNoDataSourceInspection" enabled="false" level="WARNING" enabled_by_default="false" />
