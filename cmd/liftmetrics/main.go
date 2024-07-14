@@ -10,12 +10,15 @@ import (
 
 const (
 	dataURL = "https://openpowerlifting.gitlab.io/opl-csv/files/openipf-latest.zip"
-	dataDir = "data"
+	dataDir = "../../data"
 	zipFile = "openipf-latest.zip"
 	dbName  = "openipf.db"
 )
 
 func main() {
+	// Configure logging
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+
 	// Set up file paths
 	absDataDir, err := filepath.Abs(dataDir)
 	if err != nil {
@@ -31,10 +34,25 @@ func main() {
 		log.Fatalf("Failed to create directories: %v", err)
 	}
 
+	// Log the start of the process
+	log.Println("Starting database setup process...")
+
 	// Download, extract, and process data
-	if err := services.SetupDatabase(dataURL, filePath, absDataDir, dbFilePath); err != nil {
+	if err := setupDatabase(dataURL, filePath, absDataDir, dbFilePath); err != nil {
 		log.Fatalf("Failed to setup database: %v", err)
 	}
 
 	log.Println("Database setup completed successfully.")
+}
+
+// setupDatabase wraps the services.SetupDatabase function with additional logging.
+func setupDatabase(dataURL, filePath, absDataDir, dbFilePath string) error {
+	log.Println("Downloading and processing data...")
+	err := services.SetupDatabase(dataURL, filePath, absDataDir, dbFilePath)
+	if err != nil {
+		log.Printf("Error during database setup: %v", err)
+		return err
+	}
+	log.Println("Data processing completed.")
+	return nil
 }
