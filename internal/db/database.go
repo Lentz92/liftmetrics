@@ -205,3 +205,7 @@ func PopulateDatabase(db *sql.DB, records []*Record) error {
 
 	return nil
 }
+
+func OpenDatabase(dbPath string) (*sql.DB, error) {
+	return sql.Open("sqlite3", dbPath)
+}

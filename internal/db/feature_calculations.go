@@ -5,6 +5,7 @@ import (
 	"fmt"
 )
 
+// CalculateSuccessfulAttempts updates the successful attempts for each lift type in the records table.
 func CalculateSuccessfulAttempts(db *sql.DB) error {
 	updateAttemptsSQL := `
     UPDATE records
@@ -41,6 +42,7 @@ func CalculateSuccessfulAttempts(db *sql.DB) error {
 	return nil
 }
 
+// CalculateLiftDifferences calculates and updates the lift differences and percentages in the lifter_metrics table.
 func CalculateLiftDifferences(db *sql.DB) error {
 	query := `
     INSERT OR REPLACE INTO lifter_metrics (
@@ -78,91 +80,4 @@ func CalculateLiftDifferences(db *sql.DB) error {
 	}
 
 	return nil
-}
-
-func GetLifterPerformanceOverTime(db *sql.DB, lifterName string) ([]LifterPerformance, error) {
-	query := `
-    SELECT Date, Best3SquatKg, Best3BenchKg, Best3DeadliftKg, TotalKg
-    FROM records
-    WHERE Name = ?
-    ORDER BY Date
-    `
-
-	rows, err := db.Query(query, lifterName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query lifter performance: %w", err)
-	}
-	defer rows.Close()
-
-	var performances []LifterPerformance
-	for rows.Next() {
-		var p LifterPerformance
-		if err := rows.Scan(&p.Date, &p.Squat, &p.Bench, &p.Deadlift, &p.Total); err != nil {
-			return nil, fmt.Errorf("failed to scan lifter performance: %w", err)
-		}
-		performances = append(performances, p)
-	}
-
-	return performances, nil
-}
-
-type LifterPerformance struct {
-	Date     string
-	Squat    float64
-	Bench    float64
-	Deadlift float64
-	Total    float64
-}
-
-func GetLifterStats(db *sql.DB, lifterName string) (LifterStats, error) {
-	query := `
-	SELECT 
-		r.Name, 
-		AVG(r.SuccessfulSquatAttempts) as AvgSquatSuccess,
-		AVG(r.SuccessfulBenchAttempts) as AvgBenchSuccess,
-		AVG(r.SuccessfulDeadliftAttempts) as AvgDeadliftSuccess,
-		AVG(lm.Squat1To2Kg) as AvgSquat1To2Kg,
-		AVG(lm.Squat2To3Kg) as AvgSquat2To3Kg,
-		AVG(lm.Bench1To2Kg) as AvgBench1To2Kg,
-		AVG(lm.Bench2To3Kg) as AvgBench2To3Kg,
-		AVG(lm.Deadlift1To2Kg) as AvgDeadlift1To2Kg,
-		AVG(lm.Deadlift2To3Kg) as AvgDeadlift2To3Kg
-	FROM records r
-	JOIN lifter_metrics lm ON r.ID = lm.ID
-	WHERE r.Name = ?
-	GROUP BY r.Name
-	`
-
-	var stats LifterStats
-	err := db.QueryRow(query, lifterName).Scan(
-		&stats.Name,
-		&stats.AvgSquatSuccess,
-		&stats.AvgBenchSuccess,
-		&stats.AvgDeadliftSuccess,
-		&stats.AvgSquat1To2Kg,
-		&stats.AvgSquat2To3Kg,
-		&stats.AvgBench1To2Kg,
-		&stats.AvgBench2To3Kg,
-		&stats.AvgDeadlift1To2Kg,
-		&stats.AvgDeadlift2To3Kg,
-	)
-
-	if err != nil {
-		return stats, fmt.Errorf("failed to get lifter stats: %w", err)
-	}
-
-	return stats, nil
-}
-
-type LifterStats struct {
-	Name               string
-	AvgSquatSuccess    float64
-	AvgBenchSuccess    float64
-	AvgDeadliftSuccess float64
-	AvgSquat1To2Kg     float64
-	AvgSquat2To3Kg     float64
-	AvgBench1To2Kg     float64
-	AvgBench2To3Kg     float64
-	AvgDeadlift1To2Kg  float64
-	AvgDeadlift2To3Kg  float64
 }
