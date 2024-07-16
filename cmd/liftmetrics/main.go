@@ -12,7 +12,7 @@ import (
 const (
 	dataURL    = "https://openpowerlifting.gitlab.io/opl-csv/files/openipf-latest.zip"
 	websiteURL = "https://openpowerlifting.gitlab.io/opl-csv/bulk-csv.html"
-	dataDir    = "../../data" // Changed to a relative path
+	dataDir    = "../../data"
 	zipFile    = "openipf-latest.zip"
 	dbName     = "openipf.db"
 )

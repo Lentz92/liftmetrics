@@ -104,14 +104,8 @@ func SetupDatabase(dataURL, websiteURL, filePath, dataDir, dbFilePath string) er
 
 	// Calculate and update successful attempts for each lift type
 	log.Println("Calculating new metrics for the database!")
-	if err := db.CalculateSuccessfulAttempts(database); err != nil {
+	if err := db.UpdateAllMetrics(database); err != nil {
 		log.Printf("Failed to update lift attempts in database: %v", err)
-		return ErrCalculationFailed
-	}
-
-	// Calculate and insert relative differences between attempts
-	if err := db.CalculateLiftDifferences(database); err != nil {
-		log.Printf("Failed to calculate and insert relative differences: %v", err)
 		return ErrCalculationFailed
 	}
 

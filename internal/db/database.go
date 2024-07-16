@@ -120,17 +120,17 @@ func createTables(db *sql.DB) error {
         MeetState TEXT,
         MeetTown TEXT,
         MeetName TEXT,
-        Sanctioned TEXT,
-        SuccessfulSquatAttempts INTEGER DEFAULT 0,
-        SuccessfulBenchAttempts INTEGER DEFAULT 0,
-        SuccessfulDeadliftAttempts INTEGER DEFAULT 0,
-        TotalSuccessfulAttempts INTEGER DEFAULT 0
+        Sanctioned TEXT
     );
 
     CREATE TABLE IF NOT EXISTS lifter_metrics (
-        ID TEXT PRIMARY KEY,
+        ID TEXT,
         Name TEXT,
         Date TEXT,
+        SuccessfulSquatAttempts INTEGER DEFAULT 0,
+        SuccessfulBenchAttempts INTEGER DEFAULT 0,
+        SuccessfulDeadliftAttempts INTEGER DEFAULT 0,
+        TotalSuccessfulAttempts INTEGER DEFAULT 0,
         Squat1Perc REAL,
         Squat2Perc REAL,
         Squat3Perc REAL,
@@ -146,7 +146,41 @@ func createTables(db *sql.DB) error {
         Bench2To3Kg REAL,
         Deadlift1To2Kg REAL,
         Deadlift2To3Kg REAL,
+        PRIMARY KEY (ID, Date),
         FOREIGN KEY (ID) REFERENCES records(ID)
+    );
+
+    CREATE TABLE IF NOT EXISTS aggregated_metrics_sbd (
+        Name TEXT PRIMARY KEY,
+        AvgSuccessfulSquatAttempts REAL,
+        AvgSuccessfulBenchAttempts REAL,
+        AvgSuccessfulDeadliftAttempts REAL,
+        AvgTotalSuccessfulAttempts REAL,
+        AvgSquat1Perc REAL,
+        AvgSquat2Perc REAL,
+        AvgSquat3Perc REAL,
+        AvgBench1Perc REAL,
+        AvgBench2Perc REAL,
+        AvgBench3Perc REAL,
+        AvgDeadlift1Perc REAL,
+        AvgDeadlift2Perc REAL,
+        AvgDeadlift3Perc REAL,
+        AvgSquat1To2Kg REAL,
+        AvgSquat2To3Kg REAL,
+        AvgBench1To2Kg REAL,
+        AvgBench2To3Kg REAL,
+        AvgDeadlift1To2Kg REAL,
+        AvgDeadlift2To3Kg REAL
+    );
+
+    CREATE TABLE IF NOT EXISTS aggregated_metrics_bench (
+        Name TEXT PRIMARY KEY,
+        AvgSuccessfulBenchAttempts REAL,
+        AvgBench1Perc REAL,
+        AvgBench2Perc REAL,
+        AvgBench3Perc REAL,
+        AvgBench1To2Kg REAL,
+        AvgBench2To3Kg REAL
     );
 
     CREATE INDEX IF NOT EXISTS idx_lifter_metrics_name_date ON lifter_metrics(Name, Date);
@@ -160,6 +194,7 @@ func createTables(db *sql.DB) error {
 
 	return nil
 }
+
 func PopulateDatabase(db *sql.DB, records []*Record) error {
 	tx, err := db.Begin()
 	if err != nil {
