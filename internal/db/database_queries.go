@@ -95,19 +95,24 @@ func queryWithTimeout(ctx context.Context, db *sql.DB, timeout time.Duration, op
 func GetAllLifters(ctx context.Context, db *sql.DB) ([]LifterName, error) {
 	query := `SELECT DISTINCT Name FROM records ORDER BY Name`
 
-	rows, err := queryWithTimeout(ctx, db, 5*time.Second, "getting all lifters", query)
+	rows, err := db.QueryContext(ctx, query)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying lifters: %w", err)
 	}
 	defer rows.Close()
 
 	var lifters []LifterName
 	for rows.Next() {
-		var lifter LifterName
-		if err := rows.Scan(&lifter.Name); err != nil {
-			return nil, fmt.Errorf("scanning lifter name: %w", err)
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("context canceled while iterating over lifter rows: %w", ctx.Err())
+		default:
+			var lifter LifterName
+			if err := rows.Scan(&lifter.Name); err != nil {
+				return nil, fmt.Errorf("scanning lifter name: %w", err)
+			}
+			lifters = append(lifters, lifter)
 		}
-		lifters = append(lifters, lifter)
 	}
 
 	if err := rows.Err(); err != nil {

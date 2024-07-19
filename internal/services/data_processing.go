@@ -8,6 +8,7 @@ import (
 	"liftmetrics/pkg"
 	"log"
 	"os"
+	"time"
 )
 
 // Error variables for specific failure scenarios
@@ -50,8 +51,8 @@ func SetupDatabase(dataURL, websiteURL, filePath, dataDir, dbFilePath string) er
 
 	log.Println("Update needed. Proceeding with download and database setup.")
 
-	// Create a background context for the download operation
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
 
 	// Download the ZIP file containing the new data
 	if err := DownloadFile(ctx, dataURL, filePath); err != nil {
@@ -104,8 +105,9 @@ func SetupDatabase(dataURL, websiteURL, filePath, dataDir, dbFilePath string) er
 
 	// Calculate and update successful attempts for each lift type
 	log.Println("Calculating new metrics for the database!")
-	if err := db.UpdateAllMetrics(database); err != nil {
-		log.Printf("Failed to update lift attempts in database: %v", err)
+	fc := db.NewFeatureCalculator()
+	if err := fc.UpdateAllMetrics(ctx, database); err != nil {
+		log.Printf("Failed to update metrics in database: %v", err)
 		return ErrCalculationFailed
 	}
 

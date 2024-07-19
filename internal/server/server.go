@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"database/sql"
 	"github.com/gin-gonic/gin"
 	"liftmetrics/internal/db"
@@ -24,7 +25,10 @@ func NewServer(database *sql.DB) (*Server, error) {
 		db:     database,
 	}
 
-	if err := server.updateLifterNames(); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	if err := server.updateLifterNames(ctx); err != nil {
 		return nil, err
 	}
 
@@ -32,6 +36,20 @@ func NewServer(database *sql.DB) (*Server, error) {
 
 	server.setupRoutes()
 	return server, nil
+}
+
+// updateLifterNames fetches all lifter names from the database and updates the server's cache.
+func (s *Server) updateLifterNames(ctx context.Context) error {
+	names, err := db.GetAllLifters(ctx, s.db)
+	if err != nil {
+		return err
+	}
+
+	s.mutex.Lock()
+	s.lifterNames = names
+	s.mutex.Unlock()
+
+	return nil
 }
 
 // Run starts the HTTP server on the specified address.
@@ -46,26 +64,14 @@ func (s *Server) GetLifterNames() []db.LifterName {
 	return s.lifterNames
 }
 
-// updateLifterNames fetches all lifter names from the database and updates the server's cache.
-func (s *Server) updateLifterNames() error {
-	names, err := db.GetAllLifters(s.db)
-	if err != nil {
-		return err
-	}
-
-	s.mutex.Lock()
-	s.lifterNames = names
-	s.mutex.Unlock()
-
-	return nil
-}
-
 // periodicallyUpdateLifterNames updates the lifter names cache every hour.
 func (s *Server) periodicallyUpdateLifterNames() {
 	ticker := time.NewTicker(1 * time.Hour)
 	for range ticker.C {
-		if err := s.updateLifterNames(); err != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		if err := s.updateLifterNames(ctx); err != nil {
 			log.Printf("Error updating lifter names: %v", err)
 		}
+		cancel()
 	}
 }
