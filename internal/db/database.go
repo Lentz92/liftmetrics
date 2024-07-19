@@ -123,10 +123,26 @@ func createTables(db *sql.DB) error {
         Sanctioned TEXT
     );
 
+	CREATE TABLE IF NOT EXISTS max_lifts (
+	    ID TEXT,
+	    Name TEXT,
+	    Date TEXT,
+	    MeetName TEXT,
+	    Event TEXT,
+	    Equipment TEXT,
+	    Best3SquatKg REAL,
+	    Best3BenchKg REAL, 
+	    Best3DeadliftKg REAL,
+	    TotalKg REAL,
+	   	PRIMARY KEY (ID, Date, Equipment),
+        FOREIGN KEY (ID) REFERENCES records(ID)
+	);
+
     CREATE TABLE IF NOT EXISTS lifter_metrics (
         ID TEXT,
         Name TEXT,
         Date TEXT,
+        Equipment TEXT,
         SuccessfulSquatAttempts INTEGER DEFAULT 0,
         SuccessfulBenchAttempts INTEGER DEFAULT 0,
         SuccessfulDeadliftAttempts INTEGER DEFAULT 0,
@@ -146,12 +162,14 @@ func createTables(db *sql.DB) error {
         Bench2To3Kg REAL,
         Deadlift1To2Kg REAL,
         Deadlift2To3Kg REAL,
-        PRIMARY KEY (ID, Date),
+        PRIMARY KEY (ID, Date, Equipment),
         FOREIGN KEY (ID) REFERENCES records(ID)
     );
 
+
     CREATE TABLE IF NOT EXISTS aggregated_metrics_sbd (
-        Name TEXT PRIMARY KEY,
+        Name TEXT,
+        Equipment TEXT,
         AvgSuccessfulSquatAttempts REAL,
         AvgSuccessfulBenchAttempts REAL,
         AvgSuccessfulDeadliftAttempts REAL,
@@ -170,21 +188,24 @@ func createTables(db *sql.DB) error {
         AvgBench1To2Kg REAL,
         AvgBench2To3Kg REAL,
         AvgDeadlift1To2Kg REAL,
-        AvgDeadlift2To3Kg REAL
+        AvgDeadlift2To3Kg REAL,
+        PRIMARY KEY (Name, Equipment)
     );
 
     CREATE TABLE IF NOT EXISTS aggregated_metrics_bench (
-        Name TEXT PRIMARY KEY,
+        Name TEXT,
+        Equipment TEXT,
         AvgSuccessfulBenchAttempts REAL,
         AvgBench1Perc REAL,
         AvgBench2Perc REAL,
         AvgBench3Perc REAL,
         AvgBench1To2Kg REAL,
-        AvgBench2To3Kg REAL
+        AvgBench2To3Kg REAL,
+        PRIMARY KEY (Name, Equipment)
     );
 
-    CREATE INDEX IF NOT EXISTS idx_lifter_metrics_name_date ON lifter_metrics(Name, Date);
-    CREATE INDEX IF NOT EXISTS idx_records_name_date ON records(Name, Date);
+    CREATE INDEX IF NOT EXISTS idx_lifter_metrics_name_date_equipment ON lifter_metrics(Name, Date, Equipment);
+    CREATE INDEX IF NOT EXISTS idx_records_name_date_equipment ON records(Name, Date, Equipment);
     `
 
 	_, err := db.Exec(createTableSQL)
