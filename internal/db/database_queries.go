@@ -1,13 +1,18 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 )
 
 // ErrNoRows is the error returned when a query returns no rows.
 var ErrNoRows = errors.New("no rows in result set")
+
+// ErrQueryTimeout is the error returned when a database query times out
+var ErrQueryTimeout = errors.New("database query timed out")
 
 // LifterName represents the basic information of a lifter.
 type LifterName struct {
@@ -63,13 +68,36 @@ type LifterStats struct {
 	AvgDeadlift2To3Kg  float64 `json:"avgDeadlift2To3Kg"`
 }
 
+// withTimeout wraps the given function with a timeout context
+func withTimeout(ctx context.Context, timeout time.Duration, op string, fn func(context.Context) error) error {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	err := fn(ctx)
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return fmt.Errorf("%s: %w", op, ErrQueryTimeout)
+	}
+	return err
+}
+
+// queryWithTimeout executes a query with a timeout
+func queryWithTimeout(ctx context.Context, db *sql.DB, timeout time.Duration, op, query string, args ...interface{}) (*sql.Rows, error) {
+	var rows *sql.Rows
+	err := withTimeout(ctx, timeout, op, func(ctx context.Context) error {
+		var err error
+		rows, err = db.QueryContext(ctx, query, args...)
+		return err
+	})
+	return rows, err
+}
+
 // GetAllLifters retrieves all unique lifter names from the database.
-func GetAllLifters(db *sql.DB) ([]LifterName, error) {
+func GetAllLifters(ctx context.Context, db *sql.DB) ([]LifterName, error) {
 	query := `SELECT DISTINCT Name FROM records ORDER BY Name`
 
-	rows, err := db.Query(query)
+	rows, err := queryWithTimeout(ctx, db, 5*time.Second, "getting all lifters", query)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query lifters: %w", err)
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -77,13 +105,13 @@ func GetAllLifters(db *sql.DB) ([]LifterName, error) {
 	for rows.Next() {
 		var lifter LifterName
 		if err := rows.Scan(&lifter.Name); err != nil {
-			return nil, fmt.Errorf("failed to scan lifter name: %w", err)
+			return nil, fmt.Errorf("scanning lifter name: %w", err)
 		}
 		lifters = append(lifters, lifter)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating over lifter rows: %w", err)
+		return nil, fmt.Errorf("iterating over lifter rows: %w", err)
 	}
 
 	if len(lifters) == 0 {
@@ -94,12 +122,12 @@ func GetAllLifters(db *sql.DB) ([]LifterName, error) {
 }
 
 // GetLifterDetails retrieves detailed information about a specific lifter's performances.
-func GetLifterDetails(db *sql.DB, name string) ([]LifterDetails, error) {
+func GetLifterDetails(ctx context.Context, db *sql.DB, name string) ([]LifterDetails, error) {
 	query := `
 		SELECT 
 			r.Name, r.Date, r.MeetName, 
-			r.SuccessfulSquatAttempts, r.SuccessfulBenchAttempts, 
-			r.SuccessfulDeadliftAttempts, r.TotalSuccessfulAttempts,
+			lm.SuccessfulSquatAttempts, lm.SuccessfulBenchAttempts, 
+			lm.SuccessfulDeadliftAttempts, lm.TotalSuccessfulAttempts,
 			lm.Squat1Perc, lm.Squat2Perc, lm.Squat3Perc,
 			lm.Bench1Perc, lm.Bench2Perc, lm.Bench3Perc,
 			lm.Deadlift1Perc, lm.Deadlift2Perc, lm.Deadlift3Perc,
@@ -116,9 +144,9 @@ func GetLifterDetails(db *sql.DB, name string) ([]LifterDetails, error) {
 			r.Date DESC
 	`
 
-	rows, err := db.Query(query, name)
+	rows, err := queryWithTimeout(ctx, db, 5*time.Second, "getting lifter details", query, name)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query lifter details: %w", err)
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -137,13 +165,13 @@ func GetLifterDetails(db *sql.DB, name string) ([]LifterDetails, error) {
 			&d.Deadlift1To2Kg, &d.Deadlift2To3Kg,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan lifter details: %w", err)
+			return nil, fmt.Errorf("scanning lifter details: %w", err)
 		}
 		details = append(details, d)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating over lifter details rows: %w", err)
+		return nil, fmt.Errorf("iterating over lifter details rows: %w", err)
 	}
 
 	if len(details) == 0 {
@@ -154,7 +182,7 @@ func GetLifterDetails(db *sql.DB, name string) ([]LifterDetails, error) {
 }
 
 // GetLifterPerformanceOverTime retrieves a lifter's performance over time.
-func GetLifterPerformanceOverTime(db *sql.DB, lifterName string) ([]LifterPerformance, error) {
+func GetLifterPerformanceOverTime(ctx context.Context, db *sql.DB, lifterName string) ([]LifterPerformance, error) {
 	query := `
     SELECT Date, Best3SquatKg, Best3BenchKg, Best3DeadliftKg, TotalKg
     FROM records
@@ -162,9 +190,9 @@ func GetLifterPerformanceOverTime(db *sql.DB, lifterName string) ([]LifterPerfor
     ORDER BY Date
     `
 
-	rows, err := db.Query(query, lifterName)
+	rows, err := queryWithTimeout(ctx, db, 5*time.Second, "getting lifter performance", query, lifterName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query lifter performance: %w", err)
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -172,13 +200,13 @@ func GetLifterPerformanceOverTime(db *sql.DB, lifterName string) ([]LifterPerfor
 	for rows.Next() {
 		var p LifterPerformance
 		if err := rows.Scan(&p.Date, &p.Squat, &p.Bench, &p.Deadlift, &p.Total); err != nil {
-			return nil, fmt.Errorf("failed to scan lifter performance: %w", err)
+			return nil, fmt.Errorf("scanning lifter performance: %w", err)
 		}
 		performances = append(performances, p)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating over lifter performance rows: %w", err)
+		return nil, fmt.Errorf("iterating over lifter performance rows: %w", err)
 	}
 
 	if len(performances) == 0 {
@@ -189,13 +217,13 @@ func GetLifterPerformanceOverTime(db *sql.DB, lifterName string) ([]LifterPerfor
 }
 
 // GetLifterStats retrieves statistics for a specific lifter.
-func GetLifterStats(db *sql.DB, lifterName string) (LifterStats, error) {
+func GetLifterStats(ctx context.Context, db *sql.DB, lifterName string) (LifterStats, error) {
 	query := `
 	SELECT 
 		r.Name, 
-		AVG(r.SuccessfulSquatAttempts) as AvgSquatSuccess,
-		AVG(r.SuccessfulBenchAttempts) as AvgBenchSuccess,
-		AVG(r.SuccessfulDeadliftAttempts) as AvgDeadliftSuccess,
+		AVG(lm.SuccessfulSquatAttempts) as AvgSquatSuccess,
+		AVG(lm.SuccessfulBenchAttempts) as AvgBenchSuccess,
+		AVG(lm.SuccessfulDeadliftAttempts) as AvgDeadliftSuccess,
 		AVG(lm.Squat1To2Kg) as AvgSquat1To2Kg,
 		AVG(lm.Squat2To3Kg) as AvgSquat2To3Kg,
 		AVG(lm.Bench1To2Kg) as AvgBench1To2Kg,
@@ -209,24 +237,26 @@ func GetLifterStats(db *sql.DB, lifterName string) (LifterStats, error) {
 	`
 
 	var stats LifterStats
-	err := db.QueryRow(query, lifterName).Scan(
-		&stats.Name,
-		&stats.AvgSquatSuccess,
-		&stats.AvgBenchSuccess,
-		&stats.AvgDeadliftSuccess,
-		&stats.AvgSquat1To2Kg,
-		&stats.AvgSquat2To3Kg,
-		&stats.AvgBench1To2Kg,
-		&stats.AvgBench2To3Kg,
-		&stats.AvgDeadlift1To2Kg,
-		&stats.AvgDeadlift2To3Kg,
-	)
+	err := withTimeout(ctx, 5*time.Second, "getting lifter stats", func(ctx context.Context) error {
+		return db.QueryRowContext(ctx, query, lifterName).Scan(
+			&stats.Name,
+			&stats.AvgSquatSuccess,
+			&stats.AvgBenchSuccess,
+			&stats.AvgDeadliftSuccess,
+			&stats.AvgSquat1To2Kg,
+			&stats.AvgSquat2To3Kg,
+			&stats.AvgBench1To2Kg,
+			&stats.AvgBench2To3Kg,
+			&stats.AvgDeadlift1To2Kg,
+			&stats.AvgDeadlift2To3Kg,
+		)
+	})
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return LifterStats{}, ErrNoRows
 		}
-		return LifterStats{}, fmt.Errorf("failed to get lifter stats: %w", err)
+		return LifterStats{}, fmt.Errorf("querying lifter stats: %w", err)
 	}
 
 	return stats, nil
