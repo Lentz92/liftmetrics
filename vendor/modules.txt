@@ -5,6 +5,7 @@ fyne.io/fyne/v2/app
 fyne.io/fyne/v2/canvas
 fyne.io/fyne/v2/container
 fyne.io/fyne/v2/data/binding
+fyne.io/fyne/v2/dialog
 fyne.io/fyne/v2/driver
 fyne.io/fyne/v2/driver/desktop
 fyne.io/fyne/v2/driver/mobile
@@ -155,6 +156,7 @@ github.com/rivo/uniseg
 # github.com/rymdport/portal v0.2.2
 ## explicit; go 1.19
 github.com/rymdport/portal
+github.com/rymdport/portal/filechooser
 github.com/rymdport/portal/internal/apis
 github.com/rymdport/portal/internal/convert
 github.com/rymdport/portal/notification

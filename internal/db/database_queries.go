@@ -92,7 +92,6 @@ func queryWithTimeout(ctx context.Context, db *sql.DB, timeout time.Duration, op
 	return rows, err
 }
 
-// GetAllLifters retrieves all unique lifter names from the database.
 func GetAllLifters(ctx context.Context, db *sql.DB) ([]LifterName, error) {
 	query := `SELECT DISTINCT Name FROM records ORDER BY Name`
 
