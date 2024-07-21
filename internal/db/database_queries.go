@@ -8,11 +8,12 @@ import (
 	"time"
 )
 
-// ErrNoRows is the error returned when a query returns no rows.
-var ErrNoRows = errors.New("no rows in result set")
-
-// ErrQueryTimeout is the error returned when a database query times out
-var ErrQueryTimeout = errors.New("database query timed out")
+var (
+	// ErrNoRows is the error returned when a query returns no rows.
+	ErrNoRows = errors.New("no rows in result set")
+	// ErrQueryTimeout is the error returned when a database query times out
+	ErrQueryTimeout = errors.New("database query timed out")
+)
 
 // LifterName represents the basic information of a lifter.
 type LifterName struct {
