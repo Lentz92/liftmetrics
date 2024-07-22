@@ -23,6 +23,7 @@ type LifterName struct {
 // LifterDetails represents detailed information about a lifter's performance in a meet.
 type LifterDetails struct {
 	Name                       string  `json:"name"`
+	Age                        float64 `json:"age"`
 	Date                       string  `json:"date"`
 	MeetName                   string  `json:"meetName"`
 	SuccessfulSquatAttempts    int     `json:"successfulSquatAttempts"`
@@ -129,50 +130,59 @@ func GetAllLifters(ctx context.Context, db *sql.DB) ([]LifterName, error) {
 // GetLifterDetails retrieves detailed information about a specific lifter's performances.
 func GetLifterDetails(ctx context.Context, db *sql.DB, name string) ([]LifterDetails, error) {
 	query := `
-		SELECT 
-			r.Name, r.Date, r.MeetName, 
-			lm.SuccessfulSquatAttempts, lm.SuccessfulBenchAttempts, 
-			lm.SuccessfulDeadliftAttempts, lm.TotalSuccessfulAttempts,
-			lm.Squat1Perc, lm.Squat2Perc, lm.Squat3Perc,
-			lm.Bench1Perc, lm.Bench2Perc, lm.Bench3Perc,
-			lm.Deadlift1Perc, lm.Deadlift2Perc, lm.Deadlift3Perc,
-			lm.Squat1To2Kg, lm.Squat2To3Kg,
-			lm.Bench1To2Kg, lm.Bench2To3Kg,
-			lm.Deadlift1To2Kg, lm.Deadlift2To3Kg
-		FROM 
-			records r
-		JOIN 
-			lifter_metrics lm ON r.ID = lm.ID
-		WHERE 
-			r.Name = ?
-		ORDER BY 
-			r.Date DESC
-	`
+        SELECT 
+            r.Name, r.Age, r.Date, r.MeetName, 
+            lm.SuccessfulSquatAttempts, lm.SuccessfulBenchAttempts, 
+            lm.SuccessfulDeadliftAttempts, lm.TotalSuccessfulAttempts,
+            lm.Squat1Perc, lm.Squat2Perc, lm.Squat3Perc,
+            lm.Bench1Perc, lm.Bench2Perc, lm.Bench3Perc,
+            lm.Deadlift1Perc, lm.Deadlift2Perc, lm.Deadlift3Perc,
+            lm.Squat1To2Kg, lm.Squat2To3Kg,
+            lm.Bench1To2Kg, lm.Bench2To3Kg,
+            lm.Deadlift1To2Kg, lm.Deadlift2To3Kg
+        FROM 
+            records r
+        JOIN 
+            lifter_metrics lm ON r.ID = lm.ID
+        WHERE 
+            r.Name = ?
+        ORDER BY 
+            r.Date DESC
+    `
 
-	rows, err := queryWithTimeout(ctx, db, 5*time.Second, "getting lifter details", query, name)
+	// Set a timeout for the query
+	queryCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	rows, err := db.QueryContext(queryCtx, query, name)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying lifter details: %w", err)
 	}
 	defer rows.Close()
 
 	var details []LifterDetails
 	for rows.Next() {
-		var d LifterDetails
-		err := rows.Scan(
-			&d.Name, &d.Date, &d.MeetName,
-			&d.SuccessfulSquatAttempts, &d.SuccessfulBenchAttempts,
-			&d.SuccessfulDeadliftAttempts, &d.TotalSuccessfulAttempts,
-			&d.Squat1Perc, &d.Squat2Perc, &d.Squat3Perc,
-			&d.Bench1Perc, &d.Bench2Perc, &d.Bench3Perc,
-			&d.Deadlift1Perc, &d.Deadlift2Perc, &d.Deadlift3Perc,
-			&d.Squat1To2Kg, &d.Squat2To3Kg,
-			&d.Bench1To2Kg, &d.Bench2To3Kg,
-			&d.Deadlift1To2Kg, &d.Deadlift2To3Kg,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("scanning lifter details: %w", err)
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("context canceled while iterating over lifter details rows: %w", ctx.Err())
+		default:
+			var d LifterDetails
+			err := rows.Scan(
+				&d.Name, &d.Age, &d.Date, &d.MeetName,
+				&d.SuccessfulSquatAttempts, &d.SuccessfulBenchAttempts,
+				&d.SuccessfulDeadliftAttempts, &d.TotalSuccessfulAttempts,
+				&d.Squat1Perc, &d.Squat2Perc, &d.Squat3Perc,
+				&d.Bench1Perc, &d.Bench2Perc, &d.Bench3Perc,
+				&d.Deadlift1Perc, &d.Deadlift2Perc, &d.Deadlift3Perc,
+				&d.Squat1To2Kg, &d.Squat2To3Kg,
+				&d.Bench1To2Kg, &d.Bench2To3Kg,
+				&d.Deadlift1To2Kg, &d.Deadlift2To3Kg,
+			)
+			if err != nil {
+				return nil, fmt.Errorf("scanning lifter details: %w", err)
+			}
+			details = append(details, d)
 		}
-		details = append(details, d)
 	}
 
 	if err = rows.Err(); err != nil {
