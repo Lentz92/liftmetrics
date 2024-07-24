@@ -76,6 +76,7 @@ func (m *MaxSuccessfulAttempts) Calculate(ctx context.Context, tx *sql.Tx) error
 			TotalKg, Event
 		FROM records
 		WHERE Event IN ('SBD', 'B')
+		ORDER BY Date Desc
 	`
 
 	_, err := tx.ExecContext(ctx, query)
@@ -89,6 +90,8 @@ func (m *MaxSuccessfulAttempts) Calculate(ctx context.Context, tx *sql.Tx) error
 type SuccessfulAttempts struct{}
 
 func (s *SuccessfulAttempts) Calculate(ctx context.Context, tx *sql.Tx) error {
+	// If the attempt is negative, it means the lifter failed to complete the lift, or did not attempt it.
+	// If the attempt is 0, it means the lifter has crossed their attempt.
 	query := `
 		INSERT OR REPLACE INTO lifter_metrics (
 			ID, Name, Date, Equipment,
@@ -190,12 +193,21 @@ func (a *AggregatedMetrics) calculateSBD(ctx context.Context, tx *sql.Tx) error 
 			lm.Name, lm.Equipment,
 			AVG(lm.SuccessfulSquatAttempts), AVG(lm.SuccessfulBenchAttempts), AVG(lm.SuccessfulDeadliftAttempts),
 			AVG(lm.TotalSuccessfulAttempts),
-			AVG(ABS(lm.Squat1Perc)), AVG(ABS(lm.Squat2Perc)), AVG(ABS(lm.Squat3Perc)),
-			AVG(ABS(lm.Bench1Perc)), AVG(ABS(lm.Bench2Perc)), AVG(ABS(lm.Bench3Perc)),
-			AVG(ABS(lm.Deadlift1Perc)), AVG(ABS(lm.Deadlift2Perc)), AVG(ABS(lm.Deadlift3Perc)),
-			AVG(ABS(lm.Squat1To2Kg)), AVG(ABS(lm.Squat2To3Kg)),
-			AVG(ABS(lm.Bench1To2Kg)), AVG(ABS(lm.Bench2To3Kg)),
-			AVG(ABS(lm.Deadlift1To2Kg)), AVG(ABS(lm.Deadlift2To3Kg))
+			AVG(CASE WHEN lm.Squat1Perc > 0 THEN lm.Squat1Perc END),
+			AVG(CASE WHEN lm.Squat2Perc > 0 THEN lm.Squat2Perc END),
+			AVG(CASE WHEN lm.Squat3Perc > 0 THEN lm.Squat3Perc END),
+			AVG(CASE WHEN lm.Bench1Perc > 0 THEN lm.Bench1Perc END),
+			AVG(CASE WHEN lm.Bench2Perc > 0 THEN lm.Bench2Perc END),
+			AVG(CASE WHEN lm.Bench3Perc > 0 THEN lm.Bench3Perc END),
+			AVG(CASE WHEN lm.Deadlift1Perc > 0 THEN lm.Deadlift1Perc END),
+			AVG(CASE WHEN lm.Deadlift2Perc > 0 THEN lm.Deadlift2Perc END),
+			AVG(CASE WHEN lm.Deadlift3Perc > 0 THEN lm.Deadlift3Perc END),
+			AVG(CASE WHEN lm.Squat1To2Kg > 0 THEN lm.Squat1To2Kg END),
+			AVG(CASE WHEN lm.Squat2To3Kg > 0 THEN lm.Squat2To3Kg END),
+			AVG(CASE WHEN lm.Bench1To2Kg > 0 THEN lm.Bench1To2Kg END),
+			AVG(CASE WHEN lm.Bench2To3Kg > 0 THEN lm.Bench2To3Kg END),
+			AVG(CASE WHEN lm.Deadlift1To2Kg > 0 THEN lm.Deadlift1To2Kg END),
+			AVG(CASE WHEN lm.Deadlift2To3Kg > 0 THEN lm.Deadlift2To3Kg END)
 		FROM lifter_metrics lm
 		JOIN records r ON lm.ID = r.ID AND lm.Date = r.Date AND lm.Equipment = r.Equipment
 		WHERE r.Event = 'SBD'
@@ -219,8 +231,11 @@ func (a *AggregatedMetrics) calculateBench(ctx context.Context, tx *sql.Tx) erro
 		) SELECT 
 			lm.Name, lm.Equipment,
 			AVG(lm.SuccessfulBenchAttempts),
-			AVG(ABS(lm.Bench1Perc)), AVG(ABS(lm.Bench2Perc)), AVG(ABS(lm.Bench3Perc)),
-			AVG(ABS(lm.Bench1To2Kg)), AVG(ABS(lm.Bench2To3Kg))
+			AVG(CASE WHEN lm.Bench1Perc > 0 THEN lm.Bench1Perc END),
+			AVG(CASE WHEN lm.Bench2Perc > 0 THEN lm.Bench2Perc END),
+			AVG(CASE WHEN lm.Bench3Perc > 0 THEN lm.Bench3Perc END),
+			AVG(CASE WHEN lm.Bench1To2Kg > 0 THEN lm.Bench1To2Kg END),
+			AVG(CASE WHEN lm.Bench2To3Kg > 0 THEN lm.Bench2To3Kg END)
 		FROM lifter_metrics lm
 		JOIN records r ON lm.ID = r.ID AND lm.Date = r.Date AND lm.Equipment = r.Equipment
 		WHERE r.Event = 'B'

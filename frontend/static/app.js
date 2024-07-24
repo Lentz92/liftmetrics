@@ -35,6 +35,8 @@ function debounce(func, delay) {
 
 function searchLifters() {
     const query = searchInput.value.trim();
+    console.log("Search query:", query); // Add this line for debugging
+
     if (query.length === 0) {
         clearTable();
         searchResults.innerHTML = '';
@@ -44,6 +46,7 @@ function searchLifters() {
     fetch(`/api/search?q=${encodeURIComponent(query)}`)
         .then(response => response.json())
         .then(lifters => {
+            console.log("Search results:", lifters); // Add this line for debugging
             searchResults.innerHTML = '';
             if (lifters.length > 0) {
                 lifters.forEach(lifter => {

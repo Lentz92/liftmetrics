@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"github.com/google/uuid"
@@ -288,6 +289,18 @@ func PopulateDatabase(db *sql.DB, records []*Record) error {
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
+	// Update weight classes
+	ctx := context.Background()
+
+	// Filtering records to only include the latest 5 years to make the data more currently relevant
+	if err := FilterRecentRecords(ctx, db); err != nil {
+		return fmt.Errorf("failed to filter recent records: %w", err)
+	}
+
+	// Securing that lifters are places in the correct weight-class based on their weight.
+	if err := UpdateWeightClasses(ctx, db); err != nil {
+		return fmt.Errorf("failed to update weight classes: %w", err)
+	}
 	return nil
 }
 

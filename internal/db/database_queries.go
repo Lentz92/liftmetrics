@@ -93,6 +93,112 @@ func queryWithTimeout(ctx context.Context, db *sql.DB, timeout time.Duration, op
 	return rows, err
 }
 
+func FilterRecentRecords(ctx context.Context, db *sql.DB) error {
+	// First, determine the most recent year in the dataset
+	var mostRecentYear int
+	err := db.QueryRowContext(ctx, "SELECT MAX(CAST(substr(Date, 1, 4) AS INTEGER)) FROM records").Scan(&mostRecentYear)
+	if err != nil {
+		return fmt.Errorf("failed to determine most recent year: %w", err)
+	}
+
+	// Calculate the cutoff year (5 years ago)
+	cutoffYear := mostRecentYear - 4
+
+	// Delete records older than the cutoff year
+	query := `
+    DELETE FROM records
+    WHERE CAST(substr(Date, 1, 4) AS INTEGER) < ?
+    `
+
+	result, err := db.ExecContext(ctx, query, cutoffYear)
+	if err != nil {
+		return fmt.Errorf("failed to delete old records: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	fmt.Printf("Deleted %d records older than year %d\n", rowsAffected, cutoffYear)
+
+	return nil
+}
+
+func UpdateWeightClasses(ctx context.Context, db *sql.DB) error {
+	query := `
+    UPDATE records
+    SET WeightClassKg = CASE
+        WHEN Sex = 'M' AND BodyweightKg <= 59.00 THEN '-59'
+        WHEN Sex = 'M' AND BodyweightKg <= 66.00 THEN '-66'
+        WHEN Sex = 'M' AND BodyweightKg <= 74.00 THEN '-74'
+        WHEN Sex = 'M' AND BodyweightKg <= 83.00 THEN '-83'
+        WHEN Sex = 'M' AND BodyweightKg <= 93.00 THEN '-93'
+        WHEN Sex = 'M' AND BodyweightKg <= 105.00 THEN '-105'
+        WHEN Sex = 'M' AND BodyweightKg <= 120.00 THEN '-120'
+        WHEN Sex = 'M' AND BodyweightKg > 120.00 THEN '+120'
+        WHEN Sex = 'F' AND BodyweightKg <= 47.00 THEN '-47'
+        WHEN Sex = 'F' AND BodyweightKg <= 52.00 THEN '-52'
+        WHEN Sex = 'F' AND BodyweightKg <= 57.00 THEN '-57'
+        WHEN Sex = 'F' AND BodyweightKg <= 63.00 THEN '-63'
+        WHEN Sex = 'F' AND BodyweightKg <= 69.00 THEN '-69'
+        WHEN Sex = 'F' AND BodyweightKg <= 76.00 THEN '-76'
+        WHEN Sex = 'F' AND BodyweightKg <= 84.00 THEN '-84'
+        WHEN Sex = 'F' AND BodyweightKg > 84.00 THEN '+84'
+        ELSE 'Unknown'
+    END
+    WHERE WeightClassKg IS NULL
+       OR WeightClassKg = ''
+       OR WeightClassKg != CASE
+            WHEN Sex = 'M' AND BodyweightKg <= 59.00 THEN '-59'
+            WHEN Sex = 'M' AND BodyweightKg <= 66.00 THEN '-66'
+            WHEN Sex = 'M' AND BodyweightKg <= 74.00 THEN '-74'
+            WHEN Sex = 'M' AND BodyweightKg <= 83.00 THEN '-83'
+            WHEN Sex = 'M' AND BodyweightKg <= 93.00 THEN '-93'
+            WHEN Sex = 'M' AND BodyweightKg <= 105.00 THEN '-105'
+            WHEN Sex = 'M' AND BodyweightKg <= 120.00 THEN '-120'
+            WHEN Sex = 'M' AND BodyweightKg > 120.00 THEN '+120'
+            WHEN Sex = 'F' AND BodyweightKg <= 47.00 THEN '-47'
+            WHEN Sex = 'F' AND BodyweightKg <= 52.00 THEN '-52'
+            WHEN Sex = 'F' AND BodyweightKg <= 57.00 THEN '-57'
+            WHEN Sex = 'F' AND BodyweightKg <= 63.00 THEN '-63'
+            WHEN Sex = 'F' AND BodyweightKg <= 69.00 THEN '-69'
+            WHEN Sex = 'F' AND BodyweightKg <= 76.00 THEN '-76'
+            WHEN Sex = 'F' AND BodyweightKg <= 84.00 THEN '-84'
+            WHEN Sex = 'F' AND BodyweightKg > 84.00 THEN '+84'
+            ELSE 'Unknown'
+          END
+    `
+
+	result, err := db.ExecContext(ctx, query)
+	if err != nil {
+		return fmt.Errorf("failed to update weight classes: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	fmt.Printf("Updated weight classes for %d records\n", rowsAffected)
+
+	// Remove records with unknown weight class
+	deleteQuery := "DELETE FROM records WHERE WeightClassKg = 'Unknown';"
+	result, err = db.ExecContext(ctx, deleteQuery)
+	if err != nil {
+		return fmt.Errorf("failed to remove records with unknown weight class: %w", err)
+	}
+
+	rowsDeleted, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows deleted: %w", err)
+	}
+
+	fmt.Printf("Removed %d records with unknown weight class\n", rowsDeleted)
+
+	return nil
+}
+
 func GetAllLifters(ctx context.Context, db *sql.DB) ([]LifterName, error) {
 	query := `SELECT DISTINCT Name FROM records ORDER BY Name`
 

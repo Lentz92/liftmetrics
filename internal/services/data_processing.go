@@ -104,7 +104,7 @@ func SetupDatabase(dataURL, websiteURL, filePath, dataDir, dbFilePath string) er
 	}
 
 	// Calculate and update successful attempts for each lift type
-	log.Println("Calculating new metrics for the database!")
+	log.Println("\nCalculating new metrics for the database!")
 	fc := db.NewFeatureCalculator()
 	if err := fc.UpdateAllMetrics(ctx, database); err != nil {
 		log.Printf("Failed to update metrics in database: %v", err)
