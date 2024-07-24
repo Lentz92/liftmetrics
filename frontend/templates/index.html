@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiftMetrics</title>
+    <link rel="stylesheet" href="../static/styles.css">
+</head>
+<body>
+    <div id="app">
+        <h1>LiftMetrics</h1>
+
+        <div id="search-container">
+            <label for="search-input">Search lifters:</label>
+            <input type="text" id="search-input" placeholder="Enter lifter name">
+        </div>
+
+        <div id="errorMessage"></div>
+
+        <div id="table-container">
+            <table id="lifter-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Meet Name</th>
+                        <th>Squat Attempts</th>
+                        <th>Bench Attempts</th>
+                        <th>Deadlift Attempts</th>
+                        <th>Total Attempts</th>
+                        <th>Squat 1 [%]</th>
+                        <th>Squat 2 [%]</th>
+                        <th>Squat 3 [%]</th>
+                        <th>Bench 1 [%]</th>
+                        <th>Bench 2 [%]</th>
+                        <th>Bench 3 [%]</th>
+                        <th>Deadlift 1 [%]</th>
+                        <th>Deadlift 2 [%]</th>
+                        <th>Deadlift 3 [%]</th>
+                        <th>Squat 1-2 [kg]</th>
+                        <th>Squat 2-3 [kg]</th>
+                        <th>Bench 1-2 [kg]</th>
+                        <th>Bench 2-3 [kg]</th>
+                        <th>Deadlift 1-2 [kg]</th>
+                        <th>Deadlift 2-3 [kg]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Table rows will be dynamically inserted here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="../static/app.js"></script>
+</body>
+</html>

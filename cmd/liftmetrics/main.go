@@ -33,12 +33,12 @@ func main() {
 	log.Printf("Current working directory: %s", pwd)
 
 	// Construct the path to interface.html
-	interfaceHTMLPath := filepath.Join(pwd, "..", "..", "internal", "web", "interface.html")
-	log.Printf("Constructed interface.html path: %s", interfaceHTMLPath)
+	indexHTMLPath := filepath.Join(pwd, "..", "..", "frontend", "templates", "index.html")
+	log.Printf("Constructed index.html path: %s", indexHTMLPath)
 
 	// Check if the file exists
-	if _, err := os.Stat(interfaceHTMLPath); os.IsNotExist(err) {
-		log.Fatalf("interface.html does not exist at path: %s", interfaceHTMLPath)
+	if _, err := os.Stat(indexHTMLPath); os.IsNotExist(err) {
+		log.Fatalf("index.html does not exist at path: %s", indexHTMLPath)
 	}
 
 	// Get the absolute path for the data directory
@@ -69,8 +69,11 @@ func main() {
 	}
 	defer database.Close()
 
+	// Construct the path to lifters.json
+	liftersJSONPath := filepath.Join(pwd, "..", "..", "data", "lifters.json")
+	log.Printf("Constructed lifters.json path: %s", liftersJSONPath)
 	// Load lifter names
-	lifterNames, err := loadLifterNames(filepath.Join(absDataDir, "lifters.json"))
+	lifterNames, err := loadLifterNames(liftersJSONPath)
 	if err != nil {
 		log.Fatalf("Failed to load lifter names: %v", err)
 	}
@@ -79,8 +82,8 @@ func main() {
 	log.Printf("Loaded %d lifter names", len(lifterNames))
 
 	// Create and start the HTTP server
-	server := web.NewServer(lifterNames, database, interfaceHTMLPath)
-	log.Fatal(server.Start())
+	server := web.NewServer(lifterNames, database, indexHTMLPath)
+	log.Fatal(server.Start(":8080"))
 }
 
 // setupDatabase handles the process of setting up or updating the database
